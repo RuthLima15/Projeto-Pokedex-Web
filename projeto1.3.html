@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>card Pokémon</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: linear-gradient(120deg, #e0f7fa, #fce4ec);
+      text-align: center;
+      padding: 20px;
+    }
+
+    h1 {
+      color: #333;
+      margin-bottom: 20px;
+    }
+
+    .pokemon-list {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 15px;
+    }
+
+    .pokemon-card {
+      background-color: white;
+      border-radius: 15px;
+      padding: 15px;
+      width: 150px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+      transition: transform 0.2s, box-shadow 0.2s;
+      position: relative;
+    }
+
+    .pokemon-card:hover {
+      transform: scale(1.08);
+      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+    }
+
+    .pokemon-card img {
+      width: 100px;
+      height: 100px;
+    }
+
+    .pokemon-name {
+      font-weight: bold;
+      text-transform: capitalize;
+      margin-top: 5px;
+    }
+
+    .pokemon-types {
+      margin-top: 8px;
+    }
+
+    .type {
+      display: inline-block;
+      border-radius: 10px;
+      padding: 4px 8px;
+      margin: 3px;
+      font-size: 0.8em;
+      color: white;
+      text-transform: capitalize;
+    }
+
+    button {
+      margin: 10px;
+      padding: 8px 15px;
+      border: none;
+      background-color: #2196f3;
+      color: white;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #1976d2;
+    }
+
+    #buscar {
+      margin-bottom: 20px;
+    }
+
+    input {
+      padding: 6px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+
+    .favorite-btn {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 20px;
+      transition: transform 0.2s;
+    }
+
+    .favorite-btn:hover {
+      transform: scale(1.2);
+    }
+
+    .favorited {
+      color: gold;
+    }
+  </style>
+</head>
+<body>
+  <h1>Pokémon</h1>
+
+  <div id="buscar">
+    <input type="text" id="pokemonInput" placeholder="Digite o nome do Pokémon">
+    <button id="buscarBtn">Buscar</button>
+    <button id="mostrarFavoritos">Mostrar Favoritos</button>
+  </div>
+
+  <div id="resultado"></div>
+
+  <div class="pokemon-list" id="pokemonList"></div>
+
+  <div>
+    <button id="anterior">Página Anterior</button>
+    <button id="proxima">Próxima Página</button>
+  </div>
+
+  <script>
+    let offset = 0;
+    const limit = 20;
+    let mostrandoFavoritos = false;
+
+    const typeColors = {
+      normal: '#A8A77A',
+      fire: '#EE8130',
+      water: '#6390F0',
+      electric: '#F7D02C',
+      grass: '#7AC74C',
+      ice: '#96D9D6',
+      fighting: '#C22E28',
+      poison: '#A33EA1',
+      ground: '#E2BF65',
+      flying: '#A98FF3',
+      psychic: '#F95587',
+      bug: '#A6B91A',
+      rock: '#B6A136',
+      ghost: '#735797',
+      dragon: '#6F35FC',
+      dark: '#705746',
+      steel: '#B7B7CE',
+      fairy: '#D685AD'
+    };
+
+    function getFavoritos() {
+      return JSON.parse(localStorage.getItem("favoritos")) || [];
+    }
+
+    function toggleFavorito(pokemon) {
+      let favoritos = getFavoritos();
+      const existe = favoritos.find(p => p.id === pokemon.id);
+
+      if (existe) {
+        favoritos = favoritos.filter(p => p.id !== pokemon.id);
+      } else {
+        favoritos.push(pokemon);
+      }
+
+      localStorage.setItem("favoritos", JSON.stringify(favoritos));
+      carregarPokemons(); // atualiza a exibição
+    }
+
+    async function carregarPokemons() {
+      const lista = document.getElementById("pokemonList");
+      lista.innerHTML = "";
+
+      if (mostrandoFavoritos) {
+        const favoritos = getFavoritos();
+        favoritos.forEach(p => criarCard(p));
+        return;
+      }
+
+      const resposta = await fetch(`https://pokeapi.co/api/v2/pokemon?limit=${limit}&offset=${offset}`);
+      const data = await resposta.json();
+
+      const promises = data.results.map(async (pokemon) => {
+        const resp = await fetch(pokemon.url);
+        const detalhes = await resp.json();
+        return {
+          nome: detalhes.name,
+          imagem: detalhes.sprites.other['official-artwork'].front_default,
+          id: detalhes.id,
+          tipos: detalhes.types.map(t => t.type.name)
+        };
+      });
+
+      const pokemons = await Promise.all(promises);
+      pokemons.forEach(p => criarCard(p));
+    }
+
+    function criarCard(pokemon) {
+      const lista = document.getElementById("pokemonList");
+      const favoritos = getFavoritos();
+      const isFavorito = favoritos.some(f => f.id === pokemon.id);
+
+      const tiposHTML = pokemon.tipos
+        .map(tipo => `<span class="type" style="background-color:${typeColors[tipo] || '#777'}">${tipo}</span>`)
+        .join('');
+
+      const card = document.createElement("div");
+      card.className = "pokemon-card";
+      card.innerHTML = `
+        <button class="favorite-btn ${isFavorito ? "favorited" : ""}">★</button>
+        <img src="${pokemon.imagem}" alt="${pokemon.nome}">
+        <div class="pokemon-name">${pokemon.nome}</div>
+        <div>ID: #${pokemon.id}</div>
+        <div class="pokemon-types">${tiposHTML}</div>
+      `;
+
+      card.querySelector(".favorite-btn").addEventListener("click", (e) => {
+        e.stopPropagation(); // evita recarregar ou abrir detalhes
+        toggleFavorito(pokemon);
+      });
+
+      lista.appendChild(card);
+    }
+
+    document.getElementById("proxima").addEventListener("click", () => {
+      if (!mostrandoFavoritos) {
+        offset += limit;
+        carregarPokemons();
+      }
+    });
+
+    document.getElementById("anterior").addEventListener("click", () => {
+      if (!mostrandoFavoritos && offset >= limit) {
+        offset -= limit;
+        carregarPokemons();
+      }
+    });
+
+    document.getElementById("buscarBtn").addEventListener("click", async () => {
+      const nome = document.getElementById("pokemonInput").value.toLowerCase();
+      const resultado = document.getElementById("resultado");
+      resultado.innerHTML = "";
+
+      if (!nome) {
+        resultado.innerHTML = `<p style="color:orange;">⚠️ por favor, digite o nome de um pokémon.</p>`;
+        return;
+      }
+      // mostrar carregando
+      resultado.innerHTML = `<p style = "color: blue;">⏳ Carregando...</p>`
+
+      try {
+      
+        const resposta = await fetch(`https://pokeapi.co/api/v2/pokemon/${nome}`);
+        if (!resposta.ok) throw new Error("Pokémon não encontrado");
+
+        const data = await resposta.json();
+        const pokemon = {
+          nome: data.name,
+          id: data.id,
+          imagem: data.sprites.other['official-artwork'].front_default,
+          tipos: data.types.map(t => t.type.name)
+        };
+
+        const tiposHTML = pokemon.tipos
+          .map(tipo => `<span class="type" style="background-color:${typeColors[tipo] || '#777'}">${tipo}</span>`)
+          .join('');
+
+        resultado.innerHTML = `
+          <div class="pokemon-card" style="margin: 20px auto;">
+            <button class="favorite-btn">★</button>
+            <img src="${pokemon.imagem}" alt="${pokemon.nome}">
+            <div class="pokemon-name">${pokemon.nome}</div>
+            <div>ID: #${pokemon.id}</div>
+            <div class="pokemon-types">${tiposHTML}</div>
+          </div>
+        `;
+
+        resultado.querySelector(".favorite-btn").addEventListener("click", () => toggleFavorito(pokemon));
+
+      } catch (Erro) {
+        resultado.innerHTML = `<p style="color:red;"> ❌  Pokémon não encontrado!</p>`;
+      }
+    });
+
+    document.getElementById("mostrarFavoritos").addEventListener("click", () => {
+      mostrandoFavoritos = !mostrandoFavoritos;
+      document.getElementById("mostrarFavoritos").innerText = mostrandoFavoritos
+        ? "Mostrar Todos"
+        : "Mostrar Favoritos";
+      carregarPokemons();
+    });
+
+    carregarPokemons();
+  </script>
+</body>
+</html>
