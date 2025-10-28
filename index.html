@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>card Pokémon</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <header>
+        <div class="navbar px-3">
+            <h1>Pokémon</h1>
+        </div>
+     </header>
+     
+     <main>
+        <section>
+        <div id="buscar">
+            <input type="text" id="pokemonInput" placeholder="Digite o nome do Pokémon">
+            <button id="buscarBtn">Buscar</button>
+            <button id="mostrarFavoritos"> Mostrar Favoritos</button>
+            <button id="limparFav">Desmarcar Favoritos ★</button>
+        </div>
+        <div id="resultado"></div>
+        </section>
+
+        <section>
+            <div class="pokemon-list" id="pokemonList"></div>
+        </section>
+        <nav>
+            <div>
+                <button id="anterior">Página Anterior</button>
+                <button id="proxima">Próxima Página</button>
+            </div>
+        </nav>
+        <section>
+          <div id="pokemonModal" class="modal" aria-hidden="true">
+            <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+              <button class="modal-close" id="modalClose" aria-label="Fechar Modal">&times;</button>
+              <div id="modal-details"></div>
+            </div>
+          </div>
+        </section> 
+    </main>
+
+    <footer>
+        <div>
+             © 2025 Projeto Pokédex Web - Todos os direitos reservados.
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+
+</body>
+</html>
