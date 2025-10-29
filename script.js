@@ -1,4 +1,5 @@
-let offset = 0;
+ // Estado básico de paginação e filtro
+    let offset = 0;
     const limit = 20;
     let mostrandoFavoritos = false;
 
@@ -23,6 +24,7 @@ let offset = 0;
       fairy: '#D685AD'
     };
 
+    //Favoritos (LocalStorage)
     function getFavoritos() {
       return JSON.parse(localStorage.getItem("favoritos")) || [];
     }
@@ -41,6 +43,7 @@ let offset = 0;
       carregarPokemons(); 
     }
 
+    // Carrega e renderiza a grade de cards
     async function carregarPokemons() {
       const lista = document.getElementById("pokemonList");
       lista.innerHTML = "";
@@ -69,6 +72,7 @@ let offset = 0;
       pokemons.forEach(p => criarCard(p));
     }
 
+    //Cria um card clicável para um Pokémon
     function criarCard(pokemon) {
       const lista = document.getElementById("pokemonList");
       const favoritos = getFavoritos();
@@ -94,12 +98,13 @@ let offset = 0;
       });
 
       card.addEventListener("click", () => {
-        showPokemonDetailsById(pokemon.id);
+        exibirModalDoPokemon(pokemon.id);
       });
 
       lista.appendChild(card);
     }
 
+    // Controles de paginação (próxima/anterior)
     document.getElementById("proxima").addEventListener("click", () => {
       if (!mostrandoFavoritos) {
         offset += limit;
@@ -124,6 +129,7 @@ let offset = 0;
         return;
       }
 
+      // Feedback de carregamento
       resultado.innerHTML = `<p style="color: blue;">⏳ Carregando...</p>`
 
       try {
@@ -142,6 +148,7 @@ let offset = 0;
           .map(tipo => `<span class="type" style="background-color:${typeColors[tipo] || '#777'}">${tipo}</span>`)
           .join('');
 
+        // Desenha um card com o resultado da busca
         resultado.innerHTML = `
           <div class="pokemon-card" id="resultadoCard" style="margin: 20px auto;">
             <button class="favorite-btn ${getFavoritos().some(f=>f.id===pokemon.id) ? 'favorited' : ''}">★</button>
@@ -158,7 +165,7 @@ let offset = 0;
         });
 
         document.getElementById("resultadoCard").addEventListener("click", () => {
-          showPokemonDetailsById(pokemon.id);
+          exibirModalDoPokemon(pokemon.id);
         });
 
         resultado.insertAdjacentHTML('beforeend', `<p style="margin-top:8px;color:#555;">Clique no card para ver detalhes.</p>`);
@@ -176,6 +183,7 @@ let offset = 0;
       carregarPokemons();
     });
 
+    //Limpa todos os favoritos e volta para a listagem normal
     document.getElementById('limparFav').addEventListener('click', () => {
       localStorage.removeItem('favoritos');
       mostrandoFavoritos = false;
@@ -183,78 +191,123 @@ let offset = 0;
       carregarPokemons();
     });
 
-    const modalEl = document.getElementById('pokemonModal');
-    const modalCloseBtn = document.getElementById('modalClose');
-    const modalDetails = document.getElementById('modal-details');
+    // Referências do modal (detalhes do Pokémon)
+    const $modal           = document.getElementById('pokemonModal');
+    const $modalFecharBtn  = document.getElementById('modalClose');
+    const $modalDetalhes   = document.getElementById('modal-details');
 
-    function setModalTheme(colorHex) {
-        const content = document.querySelector('#pokemonModal .modal-content');
-        if (content && colorHex) {
-            content.style.setProperty('--accent', colorHex);
+    /** Aplica a cor de destaque no conteúdo do modal. */
+    function aplicarTemaDoModal(corHex) {
+        const conteudo = document.querySelector('#pokemonModal .modal-content');
+        if (conteudo && corHex) conteudo.style.setProperty('--accent', corHex);
+    }
+
+    /** Trava/destrava o scroll da página ao abrir/fechar modal. */
+    function bloquearScroll(bloquear = true) {
+        document.body.style.overflow = bloquear ? 'hidden' : '';
+    }
+
+    /** Abre o modal */
+    function abrirModal() {
+        $modal.style.display = 'block';
+        $modal.setAttribute('aria-hidden', 'false');
+        bloquearScroll(true);
+    }
+
+    /** Fecha o modal */
+    function fecharModal() {
+        $modal.style.display = 'none';
+        $modal.setAttribute('aria-hidden', 'true');
+        bloquearScroll(false);
+    }
+
+
+    /** Converte decímetros -> metros e hectogramas */
+    function formatarMedidas({ decimetros, hectogramas }) {
+        const alturaM = (decimetros / 10).toFixed(1);
+        const pesoKg  = (hectogramas / 10).toFixed(1);
+        return { alturaM, pesoKg };
+    }
+
+    /** Gera os chips de tipos com a cor correspondente. */
+    function montarTiposHTML(types) {
+    return (types || [])
+        .map(({ type }) => {
+        const nomeTipo = type?.name ?? 'unknown';
+        const bg = typeColors[nomeTipo] || '#777';
+        return `<span class="type" style="background-color:${bg}">${nomeTipo}</span>`;
+        })
+        .join('');
+    }
+
+    /** Retorna a melhor URL de imagem disponível. */
+    function obterImagem(pokemon) {
+    return (
+        pokemon?.sprites?.other?.['official-artwork']?.front_default ||
+        pokemon?.sprites?.front_default ||
+        ''
+    );
+    }
+
+    /** Decide a cor de destaque pelo primeiro tipo. */
+    function obterCorDeDestaque(types) {
+        const tipoPrincipal = types?.[0]?.type?.name ?? '';
+        return typeColors[tipoPrincipal] || '#777';
+    }
+
+    /** Monta o HTML dos detalhes do Pokémon. */
+    function montarDetalhesHTML(pokemon) {
+        const imgURL = obterImagem(pokemon);
+        const idPad   = String(pokemon.id).padStart(3, '0');
+        const tipos   = montarTiposHTML(pokemon.types);
+        const { alturaM, pesoKg } = formatarMedidas({
+        decimetros: pokemon.height,
+        hectogramas: pokemon.weight
+    });
+
+    return `
+        <img src="${imgURL}" alt="${pokemon.name}">
+        <p><strong>ID:</strong> #${idPad}</p>
+        <h2 id="modalTitle" style="text-transform:uppercase;margin:6px 0;">
+            ${pokemon.name}
+        </h2>
+        <div class="accent-bar"></div>
+        <p><strong>Tipo(s):</strong> ${tipos}</p>
+        <p><strong>Altura:</strong> ${alturaM} m</p>
+        <p><strong>Peso:</strong> ${pesoKg} kg</p>
+        `;
+    }
+
+    /** Busca dados do Pokémon por id */
+    async function buscarPokemonPorId(id) {
+        const resp = await fetch(`https://pokeapi.co/api/v2/pokemon/${id}`);
+        if (!resp.ok) throw new Error('Falha ao obter detalhes da API');
+        return resp.json();
+    }
+
+    /** Exibe o modal com os detalhes do Pokémon pelo id. */
+    async function exibirModalDoPokemon(id) {
+        try {
+            const pokemon = await buscarPokemonPorId(id);
+            aplicarTemaDoModal(obterCorDeDestaque(pokemon.types));
+            $modalDetalhes.innerHTML = montarDetalhesHTML(pokemon);
+            abrirModal();
+        } catch (err) {
+            $modalDetalhes.innerHTML = `<p style="color:red;">Falha ao carregar detalhes do Pokémon.</p>`;
+            abrirModal();
         }
     }
-    async function showPokemonDetailsById(id) {
-      try {
-        const resp = await fetch(`https://pokeapi.co/api/v2/pokemon/${id}`);
-        if (!resp.ok) throw new Error('Erro ao obter detalhes');
-        const pokemon = await resp.json();
 
-        const img =
-          (pokemon.sprites.other && pokemon.sprites.other['official-artwork'] && pokemon.sprites.other['official-artwork'].front_default) ||
-          pokemon.sprites.front_default;
+    $modalFecharBtn.addEventListener('click', fecharModal);
 
-        const tiposHTML = pokemon.types
-          .map(t => {
-            const tipo = t.type.name;
-            const bg = typeColors[tipo] || '#777';
-            return `<span class="type" style="background-color:${bg}">${tipo}</span>`;
-          })
-          .join('');
-
-          const primaryType = pokemon.types?.[0]?.type?.name || '';
-          const accent = typeColors[primaryType] || '#777';
-          setModalTheme(accent);
-
-        modalDetails.innerHTML = `
-          <img src="${img}" alt="${pokemon.name}">
-          <p><strong>ID:</strong> #${String(pokemon.id).padStart(3, '0')}</p>
-          <h2 id="modalTitle" style="text-transform:uppercase;margin:6px 0;">${pokemon.name}</h2>
-          <div class="accent-bar"></div>
-          <p><strong>Tipo(s):</strong> ${tiposHTML}</p>
-          <p><strong>Altura:</strong> ${(pokemon.height/10).toFixed(1)} m</p>
-          <p><strong>Peso:</strong> ${(pokemon.weight/10).toFixed(1)} kg</p>
-        `;
-
-        openModal();
-      } catch (e) {
-        modalDetails.innerHTML = `<p style="color:red;">Falha ao carregar detalhes do Pokémon.</p>`;
-        openModal();
-      }
-    }
-
-    function openModal() {
-      modalEl.style.display = 'block';
-      modalEl.setAttribute('aria-hidden', 'false');
-
-      document.body.style.overflow = 'hidden';
-    }
-
-    function closeModal() {
-      modalEl.style.display = 'none';
-      modalEl.setAttribute('aria-hidden', 'true');
-      document.body.style.overflow = '';
-    }
-
-    modalCloseBtn.addEventListener('click', closeModal);
-
-    modalEl.addEventListener('click', (e) => {
-      if (e.target === modalEl) closeModal();
+    $modal.addEventListener('click', (e) => {
+        if (e.target === $modal) fecharModal();
     });
 
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && modalEl.style.display === 'block') {
-        closeModal();
-      }
+        const aberto = $modal.style.display === 'block';
+        if (e.key === 'Escape' && aberto) fecharModal();
     });
 
+    // Inicializa
     carregarPokemons();

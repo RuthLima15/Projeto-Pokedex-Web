@@ -164,6 +164,7 @@
       background: transparent;
     }
     .modal-close:hover { color: #000; }
+    
     #modal-details img {
       width: 150px;
       height: 150px;
@@ -171,9 +172,11 @@
       margin-bottom: 10px;
     }
     .modal-close:hover { color: var(--accent); }
+    
     #modal-details .type {
       margin: 4px;
     }
+    
     #modal-details .accent-bar {
         height: 6px;
         width: 100%;
